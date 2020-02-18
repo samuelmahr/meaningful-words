@@ -1,0 +1,33 @@
+
+service: meaningful-words
+package:
+    individually: true
+    exclude:
+      - lambda_functions/**
+      - node_modules/**
+      - venv/**
+      - pylintrc
+      - "*.json"
+      - README.md
+      - requirements.txt
+      - .gitignore
+
+provider:
+  name: aws
+  runtime: python3.7
+  stage:  ${opt:stage, 'dev'}
+  region: us-east-1
+
+resources: ${file(serverless_config/resources.yml)}
+
+functions: ${file(serverless_config/functions.yml)}
+
+
+plugins:
+  - serverless-python-requirements
+  - serverless-pseudo-parameters
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    layer: true

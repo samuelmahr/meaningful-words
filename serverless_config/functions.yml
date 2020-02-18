@@ -1,0 +1,23 @@
+---
+NewUpload:
+  handler: lambda_functions/new_upload.handler
+  name: ${self:service}-new-upload-${self:provider.stage}
+  description: Trigger from S3 when a new file is uploaded to S3
+  memorySize: 128
+  timeout: 10
+  package:
+    include:
+      - lambda_functions/new_upload.py
+  role:
+    Fn::GetAtt: [NewUploadLambdaRole, Arn]
+  environment:
+    TRANSCRIPT_HISTORY_TABLE:
+      Ref: TranscriptHistoryTable
+  events:
+    - s3:
+        bucket:
+          Ref: MeaningfulWordsBucket
+        event: s3:ObjectCreated:*
+        rules:
+          - prefix: uploads
+        existing: true

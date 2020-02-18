@@ -1,0 +1,69 @@
+---
+Resources:
+
+  # DynamoDB Tables
+  TranscriptHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: customer
+          AttributeType: S
+        - AttributeName: approximate_timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: customer
+          KeyType: HASH
+        - AttributeName: approximate_timestamp
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: ${self:service}-transcript-history-${self:provider.stage}
+
+  # IAM Roles
+  # Lambda
+  NewUploadLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Description: Role and Policy to allow lambda to access DynamoDB table
+      Policies:
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource:
+                  Fn::GetAtt: [TranscriptHistoryTable, Arn]
+              - Effect: Allow
+                Action:
+                  - s3:Get*
+                Resource:
+                  - Fn::GetAtt: [MeaningfulWordsBucket, Arn]
+                  - Fn::Join: ['', [Fn::GetAtt: [MeaningfulWordsBucket, Arn], '/*'] ]
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - transcribe:StartTranscriptionJob
+                Resource: '*'
+          PolicyName: ${self:service}-new-upload-lambda-policy-${self:provider.stage}
+      RoleName: ${self:service}-new-upload-lambda-role-${self:provider.stage}
+
+  # S3 Buckets
+  MeaningfulWordsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${self:service}-${self:provider.stage}
