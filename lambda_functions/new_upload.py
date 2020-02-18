@@ -19,14 +19,14 @@ def handler(event, context):
     LOGGER.info(json.dumps(event))
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
-        key = record['s3']['object']['key']
+        key = record['s3']['object']['key'].replace('+', ' ')
         metadata = get_metadata(bucket, key)
         LOGGER.info(json.dumps({'metadata': metadata}))
-        if metadata['customer']:
+        if not metadata.get('customer'):
             LOGGER.error('Customer missing in metadata!')
             continue
 
-        if metadata['media_format'] not in ('mp3', 'mp4', 'wav', 'flac'):
+        if metadata.get('media_format', '') not in ('mp3', 'mp4', 'wav', 'flac'):
             LOGGER.error(f'Unsupported media format! {metadata["media_format"]}')
             continue
 
@@ -55,10 +55,10 @@ def get_metadata(bucket, key):
 
 
 def build_dynamo_record(bucket, key, metadata):
-    approximate_timestamp = int(time.time()) * MILLIS_PER_SECOND,
+    approximate_timestamp = int(time.time() * MILLIS_PER_SECOND)
     dynamo_record = {
         'approximate_timestamp': approximate_timestamp,
-        'job_name': f'{metadata["customer"]}-{approximate_timestamp}',
+        'job_name': f'{metadata["customer"]}-{approximate_timestamp}'.replace(' ', ''),
         'upload_bucket': bucket,
         'upload_key': key,
         **metadata
@@ -83,7 +83,7 @@ def start_transcribe_job(bucket, key, job_name, media_format):
         MediaFormat=media_format,
         Media={
             'MediaFileUri': MEDIA_FILE_URI.format(bucket=bucket, key=key)
-        },
-        OutputBucketName=bucket)
+        }
+    )
     LOGGER.info(response)
     return True
